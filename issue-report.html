@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Issue 傾向レポート — toymari/tutorial-react</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", "Hiragino Sans", "Meiryo", sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      padding: 32px 16px 64px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #58a6ff;
+      letter-spacing: 0.02em;
+    }
+    header p {
+      margin-top: 6px;
+      font-size: 0.85rem;
+      color: #8b949e;
+    }
+
+    /* ── KPI カード ─────────────────────────── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      max-width: 900px;
+      margin: 0 auto 40px;
+    }
+    .kpi-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 20px 16px;
+      text-align: center;
+    }
+    .kpi-card .value {
+      font-size: 2.4rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .kpi-card .label {
+      margin-top: 6px;
+      font-size: 0.78rem;
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .kpi-card.open   .value { color: #3fb950; }
+    .kpi-card.closed .value { color: #8b949e; }
+    .kpi-card.total  .value { color: #58a6ff; }
+    .kpi-card.comments .value { color: #d2a8ff; }
+
+    /* ── チャートグリッド ─────────────────────── */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+      max-width: 900px;
+      margin: 0 auto 40px;
+    }
+    .chart-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 24px 20px;
+    }
+    .chart-card h2 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #c9d1d9;
+      margin-bottom: 16px;
+    }
+    .chart-wrap {
+      position: relative;
+      height: 240px;
+    }
+
+    /* ── イシュー一覧テーブル ─────────────────── */
+    .table-section {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .table-section h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #c9d1d9;
+      margin-bottom: 12px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    thead th {
+      background: #21262d;
+      color: #8b949e;
+      text-align: left;
+      padding: 10px 14px;
+      border-bottom: 1px solid #30363d;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 0.75rem;
+    }
+    tbody tr {
+      border-bottom: 1px solid #21262d;
+      transition: background 0.15s;
+    }
+    tbody tr:hover { background: #1c2128; }
+    tbody td { padding: 10px 14px; vertical-align: top; }
+    tbody td a { color: #58a6ff; text-decoration: none; }
+    tbody td a:hover { text-decoration: underline; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+    .badge-open   { background: #1a4731; color: #3fb950; border: 1px solid #2ea043; }
+    .badge-closed { background: #2d1f3d; color: #a371f7; border: 1px solid #6e40c9; }
+
+    footer {
+      text-align: center;
+      margin-top: 48px;
+      font-size: 0.78rem;
+      color: #484f58;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>📊 Issue 傾向レポート</h1>
+  <p>toymari / tutorial-react &nbsp;·&nbsp; 集計日時: 2026-06-10 11:19 JST</p>
+</header>
+
+<!-- KPI カード -->
+<div class="kpi-grid">
+  <div class="kpi-card total">
+    <div class="value">1</div>
+    <div class="label">Total Issues</div>
+  </div>
+  <div class="kpi-card open">
+    <div class="value">1</div>
+    <div class="label">Open</div>
+  </div>
+  <div class="kpi-card closed">
+    <div class="value">0</div>
+    <div class="label">Closed</div>
+  </div>
+  <div class="kpi-card comments">
+    <div class="value">2</div>
+    <div class="label">Total Comments</div>
+  </div>
+</div>
+
+<!-- チャート -->
+<div class="chart-grid">
+
+  <!-- Open / Closed ドーナツ -->
+  <div class="chart-card">
+    <h2>🟢 Open vs Closed</h2>
+    <div class="chart-wrap">
+      <canvas id="donutChart"></canvas>
+    </div>
+  </div>
+
+  <!-- 作成者別 バー -->
+  <div class="chart-card">
+    <h2>👤 作成者別イシュー数</h2>
+    <div class="chart-wrap">
+      <canvas id="authorChart"></canvas>
+    </div>
+  </div>
+
+  <!-- 月別作成数 ライン -->
+  <div class="chart-card">
+    <h2>📅 月別イシュー作成数</h2>
+    <div class="chart-wrap">
+      <canvas id="monthChart"></canvas>
+    </div>
+  </div>
+
+  <!-- コメント数分布 バー -->
+  <div class="chart-card">
+    <h2>💬 コメント数分布</h2>
+    <div class="chart-wrap">
+      <canvas id="commentChart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- イシュー一覧 -->
+<div class="table-section">
+  <h2>📋 イシュー一覧</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>タイトル</th>
+        <th>状態</th>
+        <th>作成者</th>
+        <th>コメント</th>
+        <th>作成日</th>
+        <th>更新日</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a href="https://github.com/toymari/tutorial-react/issues/2" target="_blank">#2</a></td>
+        <td><a href="https://github.com/toymari/tutorial-react/issues/2" target="_blank">test</a></td>
+        <td><span class="badge badge-open">open</span></td>
+        <td>toymari</td>
+        <td>2</td>
+        <td>2026-06-09</td>
+        <td>2026-06-09</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<footer>
+  Generated automatically · toymari/tutorial-react Issue Report
+</footer>
+
+<script>
+  /* ── 共通設定 ─────────────────────────────── */
+  Chart.defaults.color = '#8b949e';
+  Chart.defaults.borderColor = '#30363d';
+  const FONT = { family: "'Segoe UI','Hiragino Sans','Meiryo',sans-serif" };
+
+  /* ── 1. Open / Closed ドーナツ ─────────────── */
+  new Chart(document.getElementById('donutChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Open', 'Closed'],
+      datasets: [{
+        data: [1, 0],
+        backgroundColor: ['#238636', '#6e40c9'],
+        borderColor: ['#2ea043', '#8957e5'],
+        borderWidth: 2,
+        hoverOffset: 8,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: { position: 'bottom', labels: { font: FONT, padding: 16 } },
+        tooltip: { callbacks: {
+          label: ctx => ` ${ctx.label}: ${ctx.parsed} 件`
+        }}
+      }
+    }
+  });
+
+  /* ── 2. 作成者別バー ─────────────────────── */
+  new Chart(document.getElementById('authorChart'), {
+    type: 'bar',
+    data: {
+      labels: ['toymari'],
+      datasets: [{
+        label: 'イシュー数',
+        data: [1],
+        backgroundColor: '#1f6feb',
+        borderColor: '#388bfd',
+        borderWidth: 1,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: { stepSize: 1, font: FONT },
+          grid: { color: '#21262d' }
+        },
+        y: { ticks: { font: FONT }, grid: { display: false } }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x} 件` } }
+      }
+    }
+  });
+
+  /* ── 3. 月別作成数ライン ────────────────── */
+  new Chart(document.getElementById('monthChart'), {
+    type: 'line',
+    data: {
+      labels: ['2026-06'],
+      datasets: [{
+        label: '作成数',
+        data: [1],
+        borderColor: '#58a6ff',
+        backgroundColor: 'rgba(88,166,255,0.15)',
+        pointBackgroundColor: '#58a6ff',
+        pointRadius: 5,
+        fill: true,
+        tension: 0.3,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { stepSize: 1, font: FONT },
+          grid: { color: '#21262d' }
+        },
+        x: { ticks: { font: FONT }, grid: { display: false } }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} 件` } }
+      }
+    }
+  });
+
+  /* ── 4. コメント数分布バー ──────────────── */
+  new Chart(document.getElementById('commentChart'), {
+    type: 'bar',
+    data: {
+      labels: ['0件', '1件', '2件', '3件以上'],
+      datasets: [{
+        label: 'イシュー数',
+        data: [0, 0, 1, 0],
+        backgroundColor: '#d2a8ff',
+        borderColor: '#a371f7',
+        borderWidth: 1,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { stepSize: 1, font: FONT },
+          grid: { color: '#21262d' }
+        },
+        x: { ticks: { font: FONT }, grid: { display: false } }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} 件` } }
+      }
+    }
+  });
+</script>
+</body>
+</html>
